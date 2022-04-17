@@ -10,17 +10,27 @@ import (
 
 	"github.com/xiaozhong21/hackernews/graph/generated"
 	"github.com/xiaozhong21/hackernews/graph/model"
+	"github.com/xiaozhong21/hackernews/internal/auth"
 	"github.com/xiaozhong21/hackernews/internal/links"
 	"github.com/xiaozhong21/hackernews/internal/users"
 	"github.com/xiaozhong21/hackernews/pkg/jwt"
 )
 
 func (r *mutationResolver) CreateLink(ctx context.Context, input model.NewLink) (*model.Link, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return &model.Link{}, fmt.Errorf("access denied")
+	}
 	var link links.Link
 	link.Title = input.Title
 	link.Address = input.Address
-	linkID := link.Save()
-	return &model.Link{ID: strconv.FormatInt(linkID, 10), Title: link.Title, Address: link.Address}, nil
+	link.User = user
+	linkId := link.Save()
+	grahpqlUser := &model.User{
+		ID:   user.ID,
+		Name: user.Username,
+	}
+	return &model.Link{ID: strconv.FormatInt(linkId, 10), Title: link.Title, Address: link.Address, User: grahpqlUser}, nil
 }
 
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (string, error) {
@@ -67,7 +77,11 @@ func (r *queryResolver) Links(ctx context.Context) ([]*model.Link, error) {
 	var resultLinks []*model.Link
 	var dbLinks []links.Link = links.GetAll()
 	for _, link := range dbLinks {
-		resultLinks = append(resultLinks, &model.Link{ID: link.ID, Title: link.Title, Address: link.Address})
+		grahpqlUser := &model.User{
+			ID:   link.User.ID,
+			Name: link.User.Username,
+		}
+		resultLinks = append(resultLinks, &model.Link{ID: link.ID, Title: link.Title, Address: link.Address, User: grahpqlUser})
 	}
 	return resultLinks, nil
 }
