@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/xiaozhong21/hackernews/internal/auth"
+
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/xiaozhong21/hackernews/graph"
@@ -23,6 +25,8 @@ func main() {
 	}
 
 	router := chi.NewRouter()
+
+	router.Use(auth.Middleware())
 
 	database.InitDB()
 	database.Migrate()
